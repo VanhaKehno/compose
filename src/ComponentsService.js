@@ -15,6 +15,8 @@ const INTERNAL_COMPONENTS = {
   'serverless-framework': resolve(__dirname, '../components/framework'),
 };
 
+const regex = new RegExp('Stage [\'"].*[\'"] does not exist');
+
 const formatError = (e) => {
   let formattedError = e instanceof Error ? e.message : e;
   if (formattedError.startsWith('Error:\n')) {
@@ -438,7 +440,12 @@ class ComponentsService {
     } catch (e) {
       // If the component has an ongoing progress, we automatically set it to "error"
       if (this.context.progresses.exists(componentName)) {
-        this.context.progresses.error(componentName, e);
+        if (command === 'remove' && regex.test(e)) {
+          this.context.componentCommandsOutcomes[componentName] = 'skip';
+          this.context.progresses.skipped(componentName);
+        } else {
+          this.context.progresses.error(componentName, e);
+        }
       } else {
         this.context.output.error(`\n${formatError(e)}`);
       }
@@ -463,7 +470,12 @@ class ComponentsService {
         } catch (e) {
           // If the component has an ongoing progress, we automatically set it to "error"
           if (this.context.progresses.exists(id)) {
-            this.context.progresses.error(id, e);
+            if (method === 'remove' && regex.test(id)) {
+              this.context.componentCommandsOutcomes[id] = 'skip';
+              this.context.progresses.skipped(id);
+            } else {
+              this.context.progresses.error(id, e);
+            }
           } else {
             this.context.output.error(formatError(e), [id]);
           }
@@ -530,7 +542,13 @@ class ComponentsService {
         } catch (e) {
           // If the component has an ongoing progress, we automatically set it to "error"
           if (this.context.progresses.exists(alias)) {
-            this.context.progresses.error(alias, e);
+            if (method === 'remove' && regex.test(e)) {
+              this.context.componentCommandsOutcomes[alias] = 'skip';
+              this.context.progresses.skipped(alias);
+              return true;
+            } else {
+              this.context.progresses.error(alias, e);
+            }
           } else {
             this.context.output.error(e);
           }
